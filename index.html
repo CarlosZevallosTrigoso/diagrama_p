@@ -112,6 +112,29 @@
   ::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 10px; }
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #666; }
+
+  /* --- NUEVOS ESTILOS PARA LOS TEXTOS EN EL SVG --- */
+  /* Contenedor de texto con fondo */
+  .text-container {
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro semitransparente */
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none; /* No debe interferir con eventos de arrastre/clic */
+    display: none; /* Oculto por defecto */
+    transform: translate(-50%, -50%); /* Centrar el fondo con respecto al texto */
+  }
+
+  /* Mostrar el texto cuando el grupo SVG está seleccionado o arrastrándose */
+  .selected .text-container,
+  .dragging .text-container {
+    display: block;
+  }
+  
+  .text-container text {
+    fill: #fff; /* Color del texto blanco */
+    stroke: none; /* Quitamos el stroke para mayor nitidez */
+    dominant-baseline: central; /* Alineación vertical del texto en el medio */
+  }
 </style>
 </head>
 <body>
@@ -324,19 +347,36 @@ function makePointGroup(p){
     g.appendChild(rect);
   }
 
-  const nameT=document.createElementNS('http://www.w3.org/2000/svg','text');
-  nameT.textContent = p.name + (p.locked?' 🔒':'');
-  nameT.setAttribute('y', -(p.size||12)-12); nameT.setAttribute('text-anchor','middle');
-  nameT.setAttribute('fill','#eaeaea'); nameT.setAttribute('font-size','12');
-  nameT.setAttribute('stroke','#000'); nameT.setAttribute('stroke-width','0.5');
-  g.appendChild(nameT);
+  // --- Contenedor para el nombre del elemento ---
+  const nameContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  nameContainer.classList.add('text-container');
+  // Se calcula la posición relativa del contenedor para que el texto esté centrado
+  const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  nameText.textContent = p.name + (p.locked ? ' 🔒' : '');
+  nameText.setAttribute('text-anchor', 'middle');
+  nameText.setAttribute('font-size', '14'); 
+  nameText.setAttribute('y', -(p.size||12) - 18); // Posición final del texto
+  
+  // Para el fondo del texto, usamos un rect que se ajusta al tamaño del texto.
+  // Esto se hace calculando las dimensiones del texto después de añadirlo al DOM,
+  // pero para SVG es más complejo y a veces se usa una aproximación o un fondo fijo.
+  // Aquí usaremos un fondo fijo en el CSS y posicionaremos el texto.
+  // La clase CSS 'text-container' se encarga del fondo y su visibilidad.
+  
+  nameContainer.appendChild(nameText);
+  g.appendChild(nameContainer);
 
-  const valsT=document.createElementNS('http://www.w3.org/2000/svg','text');
-  valsT.textContent = `ico(${p.icono}) ind(${p.indice}) sim(${p.simbolo})`;
-  valsT.setAttribute('y', (p.size||12)+14); valsT.setAttribute('text-anchor','middle');
-  valsT.setAttribute('fill','#eaeaea'); valsT.setAttribute('font-size','11');
-  valsT.setAttribute('stroke','#000'); valsT.setAttribute('stroke-width','0.5');
-  g.appendChild(valsT);
+  // --- Contenedor para los valores de sliders ---
+  const valsContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  valsContainer.classList.add('text-container');
+  const valsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  valsText.textContent = `ico(${p.icono}) ind(${p.indice}) sim(${p.simbolo})`;
+  valsText.setAttribute('text-anchor', 'middle');
+  valsText.setAttribute('font-size', '11');
+  valsText.setAttribute('y', (p.size||12) + 20); // Posición final del texto
+  
+  valsContainer.appendChild(valsText);
+  g.appendChild(valsContainer);
 
   g.addEventListener('click', e=>{
     selectedId=p.id;
@@ -349,7 +389,14 @@ function makePointGroup(p){
   });
 
   let drag=false;
-  g.addEventListener('mousedown', ()=>{ if(p.locked) return; drag=true; g.style.cursor='grabbing'; selectedId=p.id; });
+  g.addEventListener('mousedown', ()=>{
+    if(p.locked) return;
+    drag=true;
+    g.style.cursor='grabbing';
+    selectedId=p.id;
+    g.classList.add('dragging'); // Añade clase 'dragging'
+    redraw(); // Para que el texto se muestre inmediatamente
+  });
   window.addEventListener('mousemove', e=>{
     if(!drag) return;
     const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
@@ -363,7 +410,12 @@ function makePointGroup(p){
     $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo+'/100';
     renderList();
   });
-  window.addEventListener('mouseup', ()=>{ drag=false; g.style.cursor=p.locked?'not-allowed':'grab'; });
+  window.addEventListener('mouseup', ()=>{
+    drag=false;
+    g.style.cursor=p.locked?'not-allowed':'grab';
+    g.classList.remove('dragging'); // Quita clase 'dragging'
+    redraw(); // Para que el texto se oculte si no está seleccionado
+  });
 
   return g;
 }
@@ -572,6 +624,7 @@ loadInput.addEventListener('change', (e) => {
 // --- 5. INICIALIZACIÓN DE LA APP ---
 updateAttractors();
 if (labelsVisible) { showLabels(); } else { hideLabels(); }
+redraw(); // Asegurarse de que el mapa se renderice al inicio
 </script>
 </body>
 </html>
