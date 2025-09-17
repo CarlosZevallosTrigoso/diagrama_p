@@ -1,23 +1,23 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mapa semiótico — 1–100 lineal + calibración manual</title>
+<title>Mapa semiótico — auto-carga diagrama_p.png</title>
 <style>
   :root{
     --bg:#0b0b0b; --panel:#111; --ink:#eaeaea; --muted:#9aa0a6;
-    --red:#ef4444; --green:#22c55e; --blue:#38bdf8; --accent:#a78bfa;
+    --red:#ef4444; --green:#22c55e; --blue:#38bdf8; --accent:#a78bfa; --sel:#f59e0b;
   }
   html,body{height:100%; margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
-  .wrap{display:grid; grid-template-columns: 420px 1fr; gap:16px; padding:16px; box-sizing:border-box; height:100%;}
+  .wrap{display:grid; grid-template-columns: 460px 1fr; gap:16px; padding:16px; box-sizing:border-box; height:100%;}
   .card{background:var(--panel); border:1px solid #1e1e1e; border-radius:16px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,.35);}
   h1{font-size:18px; margin:0 0 8px}
   h2{font-size:14px; margin:16px 0 8px; color:var(--muted); font-weight:600; letter-spacing:.2px}
   label{display:block; margin:10px 0 4px}
   input[type="text"]{width:100%; padding:8px 10px; border-radius:10px; border:1px solid #2a2a2a; background:#0e0e0f; color:var(--ink)}
   input[type="range"]{width:100%}
+  input[type="file"]{width:100%}
   .row{display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center}
   .row2{display:grid; grid-template-columns: 1fr 1fr; gap:8px; align-items:center}
   .pill{display:inline-flex; align-items:center; gap:8px; background:#0e0e10; padding:6px 10px; border-radius:999px; border:1px solid #232323; color:var(--muted)}
@@ -26,7 +26,7 @@
   .legend{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px}
   .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#121214; border:1px solid #242424}
   .dot{width:10px;height:10px;border-radius:50%}
-  .list{max-height:35vh; overflow:auto; border-top:1px dashed #2a2a2a; margin-top:8px; padding-top:8px}
+  .list{max-height:30vh; overflow:auto; border-top:1px dashed #2a2a2a; margin-top:8px; padding-top:8px}
   .item{display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center; padding:6px 0; border-bottom:1px dashed #222}
   .item:last-child{border-bottom:none}
   .small{font-size:12px; color:var(--muted)}
@@ -34,21 +34,28 @@
   svg{width:100%; height:100%; background:#000;}
   .badge{font-size:11px; color:#ddd; background:#222; border:1px solid #333; padding:2px 6px; border-radius:999px;}
   .lock{margin-left:8px; font-size:12px; color:#ddd; background:#2b2b2b; border:1px solid #3a3a3a; border-radius:10px; padding:4px 8px}
+  .dropHint{margin-top:8px; padding:8px; border:1px dashed #333; border-radius:10px; color:#cbd5e1; background:#0e0e12}
+  .selected{filter: drop-shadow(0 0 0.75rem rgba(245,158,11,.6));}
 </style>
 </head>
 <body>
 <div class="wrap">
   <section class="card">
     <h1>Mapa semiótico interactivo</h1>
-    <div class="small">Sliders 1–100 (lineal). Calibración manual de los atractores (arrastrables). Fondo: <b>diagrama_p.png</b>.</div>
+    <div class="small">Sliders 1–100 (lineal). Calibración manual. **Carga automática** del fondo <b>diagrama_p.png</b>. Exporta PNG con valores.</div>
 
     <h2>Fondo</h2>
     <div class="row">
-      <label>Archivo (misma carpeta)</label>
-      <span class="pill small">PNG/JPG/SVG</span>
+      <label>Selecciona archivo (recomendado para exportar)</label>
+      <span class="pill small">PNG/JPG</span>
+    </div>
+    <input id="bgFile" type="file" accept="image/*" />
+    <div class="row">
+      <label>Ruta (se usa por defecto)</label>
+      <span class="pill small">diagrama_p.png</span>
     </div>
     <input id="bgPath" type="text" value="diagrama_p.png" />
-    <div class="row2">
+    <div class="row2" style="margin-top:6px">
       <button class="btn" id="loadBtn">Cargar fondo</button>
       <button class="btn" id="exportBtn">Exportar PNG</button>
     </div>
@@ -68,19 +75,19 @@
       <label>Ícono</label>
       <span class="pill"><span style="background:var(--red);width:8px;height:8px;border-radius:50%;display:inline-block"></span><span id="iconoVal">50</span>/100</span>
     </div>
-    <input id="icono" type="range" min="1" max="100" step="1" value="50" oninput="iconoVal.textContent=this.value" />
+    <input id="icono" type="range" min="1" max="100" step="1" value="50" oninput="iconoVal.textContent=this.value; liveUpdateSelected();" />
 
     <div class="row">
       <label>Índice</label>
       <span class="pill"><span style="background:var(--green);width:8px;height:8px;border-radius:50%;display:inline-block"></span><span id="indiceVal">50</span>/100</span>
     </div>
-    <input id="indice" type="range" min="1" max="100" step="1" value="50" oninput="indiceVal.textContent=this.value" />
+    <input id="indice" type="range" min="1" max="100" step="1" value="50" oninput="indiceVal.textContent=this.value; liveUpdateSelected();" />
 
     <div class="row">
       <label>Símbolo</label>
       <span class="pill"><span style="background:var(--blue);width:8px;height:8px;border-radius:50%;display:inline-block"></span><span id="simboloVal">50</span>/100</span>
     </div>
-    <input id="simbolo" type="range" min="1" max="100" step="1" value="50" oninput="simboloVal.textContent=this.value" />
+    <input id="simbolo" type="range" min="1" max="100" step="1" value="50" oninput="simboloVal.textContent=this.value; liveUpdateSelected();" />
 
     <div class="row" style="margin-top:10px">
       <button class="btn primary" id="addBtn">Agregar punto</button>
@@ -89,6 +96,8 @@
 
     <h2>Elementos</h2>
     <div class="list" id="list"></div>
+
+    <div class="dropHint">💡 Arrastra y suelta imágenes (JPG/PNG) encima del gráfico. Miniaturas rectangulares.</div>
   </section>
 
   <section class="card" id="viz">
@@ -96,31 +105,33 @@
       <span><span class="dot" style="background:var(--red)"></span>Ícono</span>
       <span><span class="dot" style="background:var(--green)"></span>Índice</span>
       <span><span class="dot" style="background:var(--blue)"></span>Símbolo</span>
-      <span class="badge">Arrastra puntos • Bloquear</span>
+      <span class="badge">Arrastra puntos/imágenes • Bloquear • Renombrar</span>
     </div>
 
-    <svg id="svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <image id="bgImg" href="" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"></image>
+    <svg id="svg" viewBox="0 0 1080 768" xmlns="http://www.w3.org/2000/svg">
+      <image id="bgImg" href="" x="0" y="0" width="1080" height="768" preserveAspectRatio="xMidYMid meet"></image>
       <g id="pointsLayer"></g>
-      <g id="attractors" font-size="14" fill="#eee" stroke="#000" stroke-width="0.5">
-        <g id="A_icono" cursor="grab"><circle r="6" fill="var(--red)"></circle><text y="-10">Ícono</text></g>
-        <g id="A_indice" cursor="grab"><circle r="6" fill="var(--green)"></circle><text y="-10">Índice</text></g>
-        <g id="A_simbolo" cursor="grab"><circle r="6" fill="var(--blue)"></circle><text y="22">Símbolo</text></g>
+      <g id="attractors" fill="#eee" stroke="#000" stroke-width="0.5">
+        <g id="A_icono" cursor="grab"><circle r="8" fill="var(--red)"></circle><text y="-18" style="display:none">Ícono</text></g>
+        <g id="A_indice" cursor="grab"><circle r="8" fill="var(--green)"></circle><text y="-18" style="display:none">Índice</text></g>
+        <g id="A_simbolo" cursor="grab"><circle r="8" fill="var(--blue)"></circle><text y="26" style="display:none">Símbolo</text></g>
       </g>
     </svg>
   </section>
 </div>
 
 <script>
-let W=100, H=100;
+let W=1080, H=768;
 const svg = document.getElementById('svg');
 const bgImg = document.getElementById('bgImg');
 const pointsLayer = document.getElementById('pointsLayer');
 
-let calibMode = true; // requerido y activado por defecto
-let labelsVisible = true;
+let calibMode = true;
+// Al inicio, ocultamos etiquetas para evitar "flash" de texto grande
+let labelsVisible = false;
+let selectedId = null;
 
-// Atractores relativos (0..1). Ajusta arrastrando.
+// Atractores relativos
 let A = {icono:{x:0.25,y:0.30}, indice:{x:0.75,y:0.30}, simbolo:{x:0.50,y:0.92}};
 
 const $ = id => document.getElementById(id);
@@ -137,28 +148,46 @@ function setSVGSize(nw, nh){
   updateAttractors(); redraw();
 }
 
-// Cargar fondo
-$('loadBtn').addEventListener('click', ()=>{
-  const path = $('bgPath').value.trim(); if(!path) return;
+// Carga de fondo desde archivo
+document.getElementById('bgFile').addEventListener('change', (e)=>{
+  const file = e.target.files?.[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ev =>{
+    const data = ev.target.result;
+    const img = new Image();
+    img.onload = ()=>{ setSVGSize(img.naturalWidth||1080, img.naturalHeight||768); bgImg.setAttribute('href', data); showLabels(); };
+    img.src = data;
+  };
+  r.readAsDataURL(file);
+});
+// Carga de fondo desde ruta
+function loadFromPath(path){
   const img = new Image();
-  img.onload = ()=>{ setSVGSize(img.naturalWidth||1080, img.naturalHeight||768); bgImg.setAttribute('href', path); };
-  img.onerror = ()=> alert('No se pudo cargar: ' + path);
+  img.onload = ()=>{ setSVGSize(img.naturalWidth||1080, img.naturalHeight||768); bgImg.setAttribute('href', path); showLabels(); };
+  img.onerror = ()=> console.warn('No se pudo cargar el fondo desde ruta:', path);
   img.src = path + '?t=' + Date.now();
+}
+document.getElementById('loadBtn').addEventListener('click', ()=>{
+  const path = $('bgPath').value.trim(); if(!path) return;
+  loadFromPath(path);
 });
 
-$('toggleCalib').addEventListener('click', ()=>{
-  calibMode = !calibMode;
-  $('toggleCalib').textContent = 'Calibración: ' + (calibMode? 'ACTIVADA' : 'DESACTIVADA');
-});
-
-$('hideLabels').addEventListener('click', ()=>{
+function showLabels(){
+  labelsVisible = true;
+  ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#${id} text`).style.display = 'inline'; });
+}
+document.getElementById('hideLabels').addEventListener('click', ()=>{
   labelsVisible = !labelsVisible;
   ['A_icono','A_indice','A_simbolo'].forEach(id=>{
     document.querySelector(`#${id} text`).style.display = labelsVisible ? 'inline' : 'none';
   });
 });
+document.getElementById('toggleCalib').addEventListener('click', ()=>{
+  calibMode = !calibMode;
+  $('toggleCalib').textContent = 'Calibración: ' + (calibMode? 'ACTIVADA' : 'DESACTIVADA');
+});
 
-// Drag de atractores (si calibración activa)
+// Drag de atractores
 for(const [gid,key] of [['A_icono','icono'],['A_indice','indice'],['A_simbolo','simbolo']]){
   const g = $(gid); let dragging=false;
   g.addEventListener('mousedown', e=>{ if(!calibMode) return; dragging=true; g.style.cursor='grabbing'; });
@@ -170,17 +199,13 @@ for(const [gid,key] of [['A_icono','icono'],['A_indice','indice'],['A_simbolo','
     g.setAttribute('transform',`translate(${x},${y})`);
     A[key] = {x:x/W, y:y/H};
     updateAttractors();
-    // Recalcular las posiciones de los puntos existentes
-    points.forEach(pnt=>{
-      const pos = computeFromSliders(pnt.icono, pnt.indice, pnt.simbolo);
-      pnt.x=pos.x; pnt.y=pos.y;
-    });
+    points.forEach(pnt=>{ const pos = computeFromSliders(pnt.icono, pnt.indice, pnt.simbolo); pnt.x=pos.x; pnt.y=pos.y; });
     redraw();
   });
   window.addEventListener('mouseup', ()=>{ dragging=false; g.style.cursor='grab'; });
 }
 
-// --- Cálculo lineal 1–100 ---
+// Modelo lineal
 function computeFromSliders(icono, indice, simbolo){
   const a = abs(A);
   const wI = Math.max(icono,1), wD = Math.max(indice,1), wS = Math.max(simbolo,1);
@@ -189,8 +214,6 @@ function computeFromSliders(icono, indice, simbolo){
   const y = (wI*a.icono.y + wD*a.indice.y + wS*a.simbolo.y)/sum;
   return {x,y};
 }
-
-// inverso (baricéntricas) -> sliders (1..100)
 function slidersFromPosition(x,y){
   const a = abs(A);
   const P = {x,y}, A0=a.icono, A1=a.indice, A2=a.simbolo;
@@ -203,85 +226,154 @@ function slidersFromPosition(x,y){
   let u = 1 - v - w;
   u = Math.max(0, Math.min(1, u)); v = Math.max(0, Math.min(1, v)); w = Math.max(0, Math.min(1, w));
   const s = u+v+w || 1; u/=s; v/=s; w/=s;
-  const map = t => Math.min(100, Math.max(1, Math.round(1 + t*99))); // 0..1 -> 1..100
+  const map = t => Math.min(100, Math.max(1, Math.round(1 + t*99)));
   return { icono: map(u), indice: map(v), simbolo: map(w) };
 }
 
-// --- Puntos ---
-let points = []; // {id, name, icono, indice, simbolo, x, y, locked}
+// Puntos / Imágenes
+let points = []; // {id, name, icono, indice, simbolo, x, y, locked, imgSrc?, size}
+function liveUpdateSelected(){
+  if(!selectedId) return;
+  const p = points.find(q=>q.id===selectedId); if(!p) return;
+  p.name = $('name').value.trim() || p.name;
+  p.icono = +$('icono').value; p.indice= +$('indice').value; p.simbolo= +$('simbolo').value;
+  const pos = computeFromSliders(p.icono, p.indice, p.simbolo);
+  p.x=pos.x; p.y=pos.y;
+  redraw(); renderList();
+}
+
 $('addBtn').addEventListener('click', ()=>{
   const name = $('name').value.trim() || 'Sin título';
   const icono=+$('icono').value, indice=+$('indice').value, simbolo=+$('simbolo').value;
   const pos = computeFromSliders(icono, indice, simbolo);
   const id = crypto.randomUUID();
-  points.push({id, name, icono, indice, simbolo, x:pos.x, y:pos.y, locked:false});
+  points.push({id, name, icono, indice, simbolo, x:pos.x, y:pos.y, locked:false, size:36});
+  selectedId = id;
   redraw(); renderList();
 });
-$('clearBtn').addEventListener('click', ()=>{ points=[]; redraw(); renderList(); });
+$('clearBtn').addEventListener('click', ()=>{ points=[]; selectedId=null; redraw(); renderList(); });
+
+function makePointGroup(p){
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("transform",`translate(${p.x},${p.y})`);
+  g.style.cursor = p.locked ? 'not-allowed' : 'grab';
+  if(selectedId===p.id) g.classList.add('selected');
+
+  if(p.imgSrc){
+    const s = p.size || 36;
+    const img = document.createElementNS("http://www.w3.org/2000/svg","image");
+    img.setAttribute('href', p.imgSrc);
+    img.setAttribute('x', -s); img.setAttribute('y', -s);
+    img.setAttribute('width', s*2); img.setAttribute('height', s*2);
+    g.appendChild(img);
+    const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute('x', -s); rect.setAttribute('y', -s);
+    rect.setAttribute('width', s*2); rect.setAttribute('height', s*2);
+    rect.setAttribute('fill', 'none'); rect.setAttribute('stroke', '#fff'); rect.setAttribute('stroke-width', '1');
+    g.appendChild(rect);
+  } else {
+    const halo = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    halo.setAttribute("x",-12); halo.setAttribute("y",-12); halo.setAttribute("width",24); halo.setAttribute("height",24);
+    halo.setAttribute("fill","rgba(167,139,250,.25)");
+    halo.setAttribute("stroke","var(--accent)"); halo.setAttribute("stroke-width","1.5");
+    g.appendChild(halo);
+  }
+
+  const nameT = document.createElementNS("http://www.w3.org/2000/svg","text");
+  nameT.textContent = p.name + (p.locked?' 🔒':'');
+  nameT.setAttribute("y", -(p.size||12) - 12);
+  nameT.setAttribute("text-anchor","middle");
+  nameT.setAttribute("fill","#eaeaea"); nameT.setAttribute("font-size","12");
+  nameT.setAttribute("stroke","#000"); nameT.setAttribute("stroke-width","0.5");
+  g.appendChild(nameT);
+
+  const valsT = document.createElementNS("http://www.w3.org/2000/svg","text");
+  valsT.textContent = `ico(${p.icono}) ind(${p.indice}) sim(${p.simbolo})`;
+  valsT.setAttribute("y", (p.size||12) + 14);
+  valsT.setAttribute("text-anchor","middle");
+  valsT.setAttribute("fill","#eaeaea"); valsT.setAttribute("font-size","11");
+  valsT.setAttribute("stroke","#000"); valsT.setAttribute("stroke-width","0.5");
+  g.appendChild(valsT);
+
+  g.addEventListener('click', (e)=>{
+    selectedId = p.id;
+    const s = slidersFromPosition(p.x, p.y);
+    $('icono').value=s.icono; $('iconoVal').textContent=s.icono;
+    $('indice').value=s.indice; $('indiceVal').textContent=s.indice;
+    $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo;
+    $('name').value = p.name;
+    renderList(); redraw();
+    e.stopPropagation();
+  });
+
+  let dragging=false;
+  g.addEventListener('mousedown', ()=>{ if(p.locked) return; dragging=true; g.style.cursor='grabbing'; selectedId=p.id; });
+  window.addEventListener('mousemove', (e)=>{
+    if(!dragging) return;
+    const pt = svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
+    const q = pt.matrixTransform(svg.getScreenCTM().inverse());
+    p.x = Math.max(0, Math.min(W, q.x)); p.y = Math.max(0, Math.min(H, q.y));
+    g.setAttribute("transform",`translate(${p.x},${p.y})`);
+    const s = slidersFromPosition(p.x, p.y);
+    p.icono=s.icono; p.indice=s.indice; p.simbolo=s.simbolo;
+    $('icono').value=s.icono; $('iconoVal').textContent=s.icono;
+    $('indice').value=s.indice; $('indiceVal').textContent=s.indice;
+    $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo;
+    $('name').value = p.name;
+    valsT.textContent = `ico(${p.icono}) ind(${p.indice}) sim(${p.simbolo})`;
+    renderList();
+  });
+  window.addEventListener('mouseup', ()=>{ dragging=false; g.style.cursor=p.locked?'not-allowed':'grab'; });
+
+  return g;
+}
 
 function redraw(){
   while(pointsLayer.firstChild) pointsLayer.removeChild(pointsLayer.firstChild);
-  for(const p of points){
-    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-    g.setAttribute("transform",`translate(${p.x},${p.y})`);
-    g.style.cursor = p.locked ? 'not-allowed' : 'grab';
-
-    const halo = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    halo.setAttribute("r", 10); halo.setAttribute("fill","rgba(167,139,250,.25)");
-    halo.setAttribute("stroke","var(--accent)"); halo.setAttribute("stroke-width","1.5");
-    g.appendChild(halo);
-    const core = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    core.setAttribute("r",4); core.setAttribute("fill","#eaeaea"); core.setAttribute("stroke","#000"); core.setAttribute("stroke-width","1");
-    g.appendChild(core);
-    const label = document.createElementNS("http://www.w3.org/2000/svg","text");
-    label.textContent = p.name + (p.locked?' 🔒':''); label.setAttribute("y",-12);
-    label.setAttribute("text-anchor","middle"); label.setAttribute("fill","#eaeaea"); label.setAttribute("font-size","12");
-    label.setAttribute("stroke","#000"); label.setAttribute("stroke-width","0.5"); g.appendChild(label);
-
-    // Drag punto
-    let dragging=false;
-    g.addEventListener('mousedown', ()=>{ if(p.locked) return; dragging=true; g.style.cursor='grabbing'; });
-    window.addEventListener('mousemove', (e)=>{
-      if(!dragging) return;
-      const pt = svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
-      const q = pt.matrixTransform(svg.getScreenCTM().inverse());
-      p.x = Math.max(0, Math.min(W, q.x)); p.y = Math.max(0, Math.min(H, q.y));
-      g.setAttribute("transform",`translate(${p.x},${p.y})`);
-      const s = slidersFromPosition(p.x, p.y);
-      p.icono=s.icono; p.indice=s.indice; p.simbolo=s.simbolo;
-      $('icono').value=s.icono; $('iconoVal').textContent=s.icono;
-      $('indice').value=s.indice; $('indiceVal').textContent=s.indice;
-      $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo;
-      renderList();
-    });
-    window.addEventListener('mouseup', ()=>{ dragging=false; g.style.cursor=p.locked?'not-allowed':'grab'; });
-
-    pointsLayer.appendChild(g);
-  }
+  for(const p of points){ pointsLayer.appendChild(makePointGroup(p)); }
 }
+
 function renderList(){
   const list = $('list'); list.innerHTML='';
   for(const p of points){
     const div = document.createElement('div'); div.className='item';
     const left = document.createElement('div');
     left.innerHTML = `<b>${p.name}</b> <span class="lock">${p.locked?'Bloqueado':'Libre'}</span>
-      <div class="small">Ico ${p.icono} · Ind ${p.indice} · Sím ${p.simbolo}</div>`;
+      <div class="small">ico(${p.icono}) · ind(${p.indice}) · sim(${p.simbolo})${p.imgSrc ? ' · img':''}</div>`;
     const right = document.createElement('div');
+    const renameBtn = document.createElement('button'); renameBtn.className='btn'; renameBtn.textContent='Renombrar';
     const lockBtn = document.createElement('button'); lockBtn.className='btn'; lockBtn.textContent = p.locked?'Desbloquear':'Bloquear';
-    const recalcBtn = document.createElement('button'); recalcBtn.className='btn'; recalcBtn.style.marginLeft='6px'; recalcBtn.textContent='Recalcular';
+    const sizeMinus = document.createElement('button'); sizeMinus.className='btn'; sizeMinus.textContent='−';
+    const sizePlus = document.createElement('button'); sizePlus.className='btn'; sizePlus.textContent='+';
+    sizePlus.style.marginLeft='6px';
     const del = document.createElement('button'); del.className='btn'; del.textContent='Eliminar'; del.style.marginLeft='6px';
-    right.append(lockBtn, recalcBtn, del);
+    right.append(renameBtn, lockBtn, sizeMinus, sizePlus, del);
     div.append(left, right);
     list.appendChild(div);
 
+    renameBtn.onclick = ()=>{
+      const nuevo = prompt('Nuevo nombre', p.name);
+      if(nuevo){ p.name = nuevo; if(selectedId===p.id) $('name').value = nuevo; redraw(); renderList(); }
+    };
     lockBtn.onclick = ()=>{ p.locked=!p.locked; redraw(); renderList(); };
-    recalcBtn.onclick = ()=>{ const pos = computeFromSliders(p.icono,p.indice,p.simbolo); p.x=pos.x; p.y=pos.y; redraw(); };
-    del.onclick = ()=>{ points = points.filter(q=>q!==p); redraw(); renderList(); };
+    sizeMinus.onclick = ()=>{ p.size = Math.max(12, (p.size||36)-4); redraw(); };
+    sizePlus.onclick = ()=>{ p.size = Math.min(160, (p.size||36)+4); redraw(); };
+    del.onclick = ()=>{ points = points.filter(q=>q!==p); if(selectedId===p.id) selectedId=null; redraw(); renderList(); };
+
+    left.onclick = ()=>{
+      selectedId = p.id;
+      const s = slidersFromPosition(p.x, p.y);
+      $('icono').value=s.icono; $('iconoVal').textContent=s.icono;
+      $('indice').value=s.indice; $('indiceVal').textContent=s.indice;
+      $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo;
+      $('name').value=p.name;
+      redraw();
+    };
   }
 }
 
 // Export PNG
-$('exportBtn').addEventListener('click', ()=>{
+document.getElementById('exportBtn').addEventListener('click', ()=>{
   const serializer = new XMLSerializer();
   const str = serializer.serializeToString(svg);
   const blob = new Blob([str], {type:"image/svg+xml;charset=utf-8"});
@@ -298,8 +390,35 @@ $('exportBtn').addEventListener('click', ()=>{
   img.src = url;
 });
 
-// Init
-(function init(){ $('bgPath').value='diagrama_p.png'; $('loadBtn').click(); })();
+// Drag&Drop de imágenes
+const vizCard = document.getElementById('viz');
+['dragenter','dragover'].forEach(ev=>vizCard.addEventListener(ev, e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; }));
+vizCard.addEventListener('drop', e=>{
+  e.preventDefault();
+  const files = [...(e.dataTransfer.files||[])].filter(f=>/^image\//.test(f.type));
+  if(!files.length) return;
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const drop = pt.matrixTransform(svg.getScreenCTM().inverse());
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const id = crypto.randomUUID();
+      const name = file.name.replace(/\.[^.]+$/, '');
+      const s = slidersFromPosition(Math.max(0,Math.min(W,drop.x)), Math.max(0,Math.min(H,drop.y)));
+      const pos = computeFromSliders(s.icono, s.indice, s.simbolo);
+      points.push({id, name, icono:s.icono, indice:s.indice, simbolo:s.simbolo, x:pos.x, y:pos.y, locked:false, imgSrc:ev.target.result, size:36});
+      selectedId = id; redraw(); renderList();
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// Init: auto-cargar diagrama_p.png
+(function init(){
+  const def = 'diagrama_p.png';
+  document.getElementById('bgPath').value = def;
+  loadFromPath(def);
+})();
 </script>
 </body>
 </html>
