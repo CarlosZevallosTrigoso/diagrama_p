@@ -113,27 +113,22 @@
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #666; }
 
-  /* --- NUEVOS ESTILOS PARA LOS TEXTOS EN EL SVG --- */
-  /* Contenedor de texto con fondo */
   .text-container {
-    background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro semitransparente */
+    background-color: rgba(0, 0, 0, 0.7);
     padding: 4px 8px;
     border-radius: 6px;
-    pointer-events: none; /* No debe interferir con eventos de arrastre/clic */
-    display: none; /* Oculto por defecto */
-    transform: translate(-50%, -50%); /* Centrar el fondo con respecto al texto */
+    pointer-events: none;
+    display: none;
+    transform: translate(-50%, -50%);
   }
-
-  /* Mostrar el texto cuando el grupo SVG está seleccionado o arrastrándose */
   .selected .text-container,
   .dragging .text-container {
     display: block;
   }
-  
   .text-container text {
-    fill: #fff; /* Color del texto blanco */
-    stroke: none; /* Quitamos el stroke para mayor nitidez */
-    dominant-baseline: central; /* Alineación vertical del texto en el medio */
+    fill: #fff;
+    stroke: none;
+    dominant-baseline: central;
   }
 </style>
 </head>
@@ -228,7 +223,7 @@ const $ = id => document.getElementById(id);
 const svg = document.getElementById('svg');
 const bgImg = document.getElementById('bgImg');
 
-// --- 2. FUNCIONES PRINCIPALES Y DE CÁLCULO (DECLARADAS PRIMERO) ---
+// --- 2. FUNCIONES PRINCIPALES Y DE CÁLCULO ---
 function abs(Arel){return {icono:{x:Arel.icono.x*W,y:Arel.icono.y*H}, indice:{x:Arel.indice.x*W,y:Arel.indice.y*H}, simbolo:{x:Arel.simbolo.x*W,y:Arel.simbolo.y*H}};}
 
 function computeFromSliders(icono, indice, simbolo){
@@ -255,6 +250,17 @@ function slidersFromPosition(x,y){
   const map = t => Math.min(100, Math.max(1, Math.round(1 + t*99)));
   return { icono: map(u), indice: map(v), simbolo: map(w) };
 }
+
+// **INICIO DE LA CORRECCIÓN**
+// La función `recalcAll` se restaura aquí
+function recalcAll(){
+  points.forEach(p=>{
+    const pos = computeFromSliders(p.icono, p.indice, p.simbolo);
+    p.x=pos.x; p.y=pos.y;
+  });
+  redraw();
+}
+// **FIN DE LA CORRECCIÓN**
 
 // --- 3. FUNCIONES DE RENDERIZADO Y ACTUALIZACIÓN DE UI ---
 function redraw(){
@@ -347,34 +353,23 @@ function makePointGroup(p){
     g.appendChild(rect);
   }
 
-  // --- Contenedor para el nombre del elemento ---
   const nameContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   nameContainer.classList.add('text-container');
-  // Se calcula la posición relativa del contenedor para que el texto esté centrado
   const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   nameText.textContent = p.name + (p.locked ? ' 🔒' : '');
   nameText.setAttribute('text-anchor', 'middle');
   nameText.setAttribute('font-size', '14'); 
-  nameText.setAttribute('y', -(p.size||12) - 18); // Posición final del texto
-  
-  // Para el fondo del texto, usamos un rect que se ajusta al tamaño del texto.
-  // Esto se hace calculando las dimensiones del texto después de añadirlo al DOM,
-  // pero para SVG es más complejo y a veces se usa una aproximación o un fondo fijo.
-  // Aquí usaremos un fondo fijo en el CSS y posicionaremos el texto.
-  // La clase CSS 'text-container' se encarga del fondo y su visibilidad.
-  
+  nameText.setAttribute('y', -(p.size||12) - 18);
   nameContainer.appendChild(nameText);
   g.appendChild(nameContainer);
 
-  // --- Contenedor para los valores de sliders ---
   const valsContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   valsContainer.classList.add('text-container');
   const valsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   valsText.textContent = `ico(${p.icono}) ind(${p.indice}) sim(${p.simbolo})`;
   valsText.setAttribute('text-anchor', 'middle');
   valsText.setAttribute('font-size', '11');
-  valsText.setAttribute('y', (p.size||12) + 20); // Posición final del texto
-  
+  valsText.setAttribute('y', (p.size||12) + 20);
   valsContainer.appendChild(valsText);
   g.appendChild(valsContainer);
 
@@ -394,8 +389,8 @@ function makePointGroup(p){
     drag=true;
     g.style.cursor='grabbing';
     selectedId=p.id;
-    g.classList.add('dragging'); // Añade clase 'dragging'
-    redraw(); // Para que el texto se muestre inmediatamente
+    g.classList.add('dragging');
+    redraw();
   });
   window.addEventListener('mousemove', e=>{
     if(!drag) return;
@@ -413,8 +408,8 @@ function makePointGroup(p){
   window.addEventListener('mouseup', ()=>{
     drag=false;
     g.style.cursor=p.locked?'not-allowed':'grab';
-    g.classList.remove('dragging'); // Quita clase 'dragging'
-    redraw(); // Para que el texto se oculte si no está seleccionado
+    g.classList.remove('dragging');
+    redraw();
   });
 
   return g;
@@ -441,7 +436,6 @@ function liveUpdateSelected(){
 }
 
 // --- 4. EVENT LISTENERS (ASIGNADOS AL FINAL) ---
-// Controles de Calibración
 $('toggleCalib').addEventListener('click', ()=>{
   calibMode = !calibMode;
   $('toggleCalib').textContent = 'Calibración: ' + (calibMode ? 'ACTIVADA' : 'DESACTIVADA');
@@ -450,7 +444,6 @@ $('toggleLabels').addEventListener('click', ()=>{ labelsVisible ? hideLabels() :
 $('resetCalib').addEventListener('click', ()=>{ A = JSON.parse(JSON.stringify(A0)); updateAttractors(); recalcAll(); });
 $('recalcAll').addEventListener('click', recalcAll);
 
-// Arrastre de Atractores
 for(const [gid,key] of [['A_icono','icono'],['A_indice','indice'],['A_simbolo','simbolo']]){
   const g = $(gid); let drag=false;
   g.addEventListener('mousedown', ()=>{ if(!calibMode) return; drag=true; g.style.cursor='grabbing'; });
@@ -466,7 +459,6 @@ for(const [gid,key] of [['A_icono','icono'],['A_indice','indice'],['A_simbolo','
   window.addEventListener('mouseup', ()=>{ drag=false; g.style.cursor='grab'; });
 }
 
-// Controles de Nuevos Elementos
 $('addBtn').addEventListener('click', ()=>{
   const name = prompt("Dale un nombre al nuevo elemento:", "Punto sin título");
   if (name === null) return; 
@@ -484,7 +476,6 @@ $('clearBtn').addEventListener('click', ()=>{
   }
 });
 
-// Arrastre y subida de imágenes
 const vizCard=document.getElementById('viz');
 ['dragenter','dragover'].forEach(ev=>vizCard.addEventListener(ev, e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; }));
 vizCard.addEventListener('drop', e=>{
@@ -544,7 +535,6 @@ fileInput.addEventListener('change', (e) => {
   fileInput.value = '';
 });
 
-// Lógica de Exportar a PNG
 const exportBtn = $('exportBtnTopRight'); 
 const vizNode = $('viz');
 exportBtn.addEventListener('click', () => {
@@ -567,7 +557,6 @@ exportBtn.addEventListener('click', () => {
     });
 });
 
-// Lógica para Guardar y Cargar Sesión
 const saveBtn = $('saveSessionBtn');
 const loadInput = $('loadSessionInput');
 
@@ -624,7 +613,7 @@ loadInput.addEventListener('change', (e) => {
 // --- 5. INICIALIZACIÓN DE LA APP ---
 updateAttractors();
 if (labelsVisible) { showLabels(); } else { hideLabels(); }
-redraw(); // Asegurarse de que el mapa se renderice al inicio
+redraw();
 </script>
 </body>
 </html>
