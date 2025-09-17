@@ -8,7 +8,7 @@
 <style>
   :root{
     --bg:#0b0b0b; --panel:#111; --ink:#eaeaea; --muted:#9aa0a6;
-    --red:#ef4444; --green:#22c56e; --blue:#38bdf8; --accent:#a78bfa; /* Ajuste leve del verde si te gusta */
+    --red:#ef4444; --green:#22c55e; --blue:#38bdf8; --accent:#a78bfa;
   }
   html,body{height:100%; margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
   
@@ -45,7 +45,7 @@
   .small{font-size:12px; color:var(--muted)}
   #viz{height:100%; overflow:hidden;}
   svg{width:100%; height:100%; background:#000}
-  .list{max-height:30vh; overflow:auto; border-top:1px dashed #2a2a2a; margin-top:8px; padding-top:8px}
+  .list{flex-grow: 1; overflow-y: auto; border-top:1px dashed #2a2a2a; margin-top:8px; padding-top:8px}
   .item{display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center; padding:6px 0; border-bottom:1px dashed #222}
   .item:last-child{border-bottom:none}
   .lock{margin-left:8px; font-size:12px; color:#ddd; background:#2b2b2b; border:1px solid #3a3a3a; border-radius:10px; padding:4px 8px}
@@ -54,61 +54,73 @@
   .dot{width:10px; height:10px; border-radius:50%}
   .selected{filter: drop-shadow(0 0 0.75rem rgba(245,158,11,.6));}
 
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #666; }
+
+  /* === NUEVOS ESTILOS PARA EL ACORDEÓN === */
+  .accordion-toggle {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+    padding: 8px 0;
+    margin: 8px 0 0 0;
+    border-bottom: 1px solid #2a2a2a;
   }
-  ::-webkit-scrollbar-track {
-    background: #1a1a1a;
-    border-radius: 10px;
+  .accordion-toggle:hover {
+    color: var(--accent);
   }
-  ::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 10px;
+  .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease-out;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #666;
+  .accordion-toggle.active + .accordion-content {
+    /* max-height es manejado por JavaScript para una transición suave */
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <section class="card">
+  <section class="card" style="display: flex; flex-direction: column;">
     <h1>Mapa semiótico interactivo</h1>
-    <div class="small">Fondo fijo. Sliders 1–100 lineales. Calibración manual.</div>
+    <div class="small" style="margin-bottom: 16px;">💡 Arrastra y suelta imágenes, o súbelas desde un archivo. Renombra, bloquea y redimensiona elementos desde la lista de abajo.</div>
 
-    <h2>Calibración</h2>
-    <div class="row2">
-      <button class="btn" id="toggleCalib">Calibración: ACTIVADA</button>
-      <button class="btn" id="toggleLabels">Ocultar/mostrar etiquetas</button>
-    </div>
-    <div class="small">Coords atractores: <span id="coords">—</span></div>
-    <div class="row2" style="margin-top:6px">
-      <button class="btn" id="recalcAll">Recalcular todos</button>
-      <button class="btn" id="resetCalib">Reset atractores</button>
-      <button class="btn" id="exportBtn" style="background:#15803d;">Guardar como PNG</button>
+    <h2 class="accordion-toggle" data-section="calibracion">▶ Calibración</h2>
+    <div class="accordion-content">
+      <div class="row2">
+        <button class="btn" id="toggleCalib">Calibración: ACTIVADA</button>
+        <button class="btn" id="toggleLabels">Ocultar/mostrar etiquetas</button>
+      </div>
+      <div class="small" style="margin-top: 8px;">Coords atractores: <span id="coords">—</span></div>
+      <div class="row2" style="margin-top:6px">
+        <button class="btn" id="recalcAll">Recalcular todos</button>
+        <button class="btn" id="resetCalib">Reset atractores</button>
+        <button class="btn" id="exportBtn" style="background:#15803d;">Guardar como PNG</button>
+      </div>
     </div>
 
-    <h2>Nuevo elemento</h2>
-    <label>Nombre</label>
-    <input id="name" type="text" placeholder="Ej.: Afiche de campaña" />
-    <label>Ícono <span id="iconoVal" class="small">50/100</span></label>
-    <input id="icono" type="range" min="1" max="100" step="1" value="50" oninput="iconoVal.textContent=this.value+'/100'; liveUpdateSelected();" />
-    <label>Índice <span id="indiceVal" class="small">50/100</span></label>
-    <input id="indice" type="range" min="1" max="100" step="1" value="50" oninput="indiceVal.textContent=this.value+'/100'; liveUpdateSelected();" />
-    <label>Símbolo <span id="simboloVal" class="small">50/100</span></label>
-    <input id="simbolo" type="range" min="1" max="100" step="1" value="50" oninput="simboloVal.textContent=this.value+'/100'; liveUpdateSelected();" />
-    <div class="row2" style="margin-top:8px">
-      <button class="btn primary" id="addBtn">Agregar punto</button>
-      <button class="btn" id="clearBtn">Limpiar</button>
+    <h2 class="accordion-toggle active" data-section="nuevo-elemento">▼ Nuevo elemento</h2>
+    <div class="accordion-content">
+      <label>Nombre</label>
+      <input id="name" type="text" placeholder="Ej.: Afiche de campaña" />
+      <label>Ícono <span id="iconoVal" class="small">50/100</span></label>
+      <input id="icono" type="range" min="1" max="100" step="1" value="50" oninput="iconoVal.textContent=this.value+'/100'; liveUpdateSelected();" />
+      <label>Índice <span id="indiceVal" class="small">50/100</span></label>
+      <input id="indice" type="range" min="1" max="100" step="1" value="50" oninput="indiceVal.textContent=this.value+'/100'; liveUpdateSelected();" />
+      <label>Símbolo <span id="simboloVal" class="small">50/100</span></label>
+      <input id="simbolo" type="range" min="1" max="100" step="1" value="50" oninput="simboloVal.textContent=this.value+'/100'; liveUpdateSelected();" />
+      <div class="row2" style="margin-top:8px">
+        <button class="btn primary" id="addBtn">Agregar punto</button>
+        <button class="btn" id="clearBtn">Limpiar</button>
+      </div>
+      <label for="fileInput" class="btn" style="display: block; text-align: center; margin-top: 10px; background-color: #3730a3;">Subir imagen desde archivo</label>
+      <input type="file" id="fileInput" accept="image/png, image/jpeg" multiple style="display: none;" />
     </div>
     
-    <label for="fileInput" class="btn" style="display: block; text-align: center; margin-top: 10px; background-color: #3730a3;">Subir imagen desde archivo</label>
-    <input type="file" id="fileInput" accept="image/png, image/jpeg" multiple style="display: none;" />
-    
-    <h2>Elementos</h2>
+    <h2 style="margin-bottom: 0;">Elementos</h2>
     <div class="list" id="list"></div>
-    <div class="small" style="margin-top:8px">💡 Arrastrá y soltá imágenes JPG/PNG sobre el gráfico. Miniaturas rectangulares. Renombrar/Bloquear/Redimensionar desde la lista. Los valores <i>ico/ind/sim</i> se muestran bajo cada elemento.</div>
   </section>
 
   <section class="card" id="viz">
@@ -152,11 +164,11 @@ function updateAttractors(){
   $('coords').textContent = `Ícono(${a.icono.x.toFixed(0)},${a.icono.y.toFixed(0)}) · Índice(${a.indice.x.toFixed(0)},${a.indice.y.toFixed(0)}) · Símbolo(${a.simbolo.x.toFixed(0)},${a.simbolo.y.toFixed(0)})`;
 }
 function setSVGSize(nw, nh){
-  W=nw; H=nh; svg.setAttribute('viewBox',`0 -250 ${W} ${H}`); // <-- ACTUALIZADO para que coincida con el nuevo viewBox
+  W=nw; H=nh; svg.setAttribute('viewBox',`0 -250 ${W} ${H}`);
   updateAttractors(); redraw();
 }
 function showLabels(){ labelsVisible=true; ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#${id} text`).style.display='inline'; }); }
-function hideLabels(){ labelsVisible=false; ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#id} text`).style.display='none'; }); }
+function hideLabels(){ labelsVisible=false; ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#${id} text`).style.display='none'; }); }
 
 $('toggleCalib').addEventListener('click', ()=>{
   calibMode = !calibMode;
@@ -394,7 +406,7 @@ fileInput.addEventListener('change', (e) => {
     };
     reader.readAsDataURL(file);
   });
-  fileInput.value = ''; // Limpiar el input para permitir subir el mismo archivo de nuevo
+  fileInput.value = '';
 });
 
 const exportBtn = $('exportBtn');
@@ -425,8 +437,57 @@ exportBtn.addEventListener('click', () => {
     });
 });
 
+// === NUEVA LÓGICA PARA EL ACORDEÓN ===
+document.addEventListener('DOMContentLoaded', () => {
+    const accordions = document.querySelectorAll('.accordion-toggle');
+    const openByDefault = document.querySelector('.accordion-toggle.active');
+
+    // Función para abrir una sección
+    function openAccordion(toggle, content) {
+        toggle.classList.add('active');
+        toggle.textContent = '▼ ' + toggle.dataset.section.replace('-', ' ');
+        content.style.maxHeight = content.scrollHeight + 'px';
+    }
+
+    // Función para cerrar una sección
+    function closeAccordion(toggle, content) {
+        toggle.classList.remove('active');
+        toggle.textContent = '▶ ' + toggle.dataset.section.replace('-', ' ');
+        content.style.maxHeight = null;
+    }
+
+    // Abrir la sección por defecto una vez que la página ha cargado
+    if (openByDefault) {
+        const content = openByDefault.nextElementSibling;
+        openAccordion(openByDefault, content);
+    }
+
+    accordions.forEach(toggle => {
+        // Establecer el texto inicial
+        const sectionName = toggle.dataset.section.replace('-', ' ');
+        if (!toggle.classList.contains('active')) {
+            toggle.textContent = '▶ ' + sectionName;
+        }
+
+        toggle.addEventListener('click', () => {
+            const content = toggle.nextElementSibling;
+            const isActive = toggle.classList.contains('active');
+            
+            // Cerrar todas las secciones
+            accordions.forEach(otherToggle => {
+                closeAccordion(otherToggle, otherToggle.nextElementSibling);
+            });
+
+            // Si no estaba activa, abrir la sección clickeada
+            if (!isActive) {
+                openAccordion(toggle, content);
+            }
+        });
+    });
+});
+
+
 // Init
-setSVGSize(W,H);
 updateAttractors();
 showLabels();
 </script>
