@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mapa semiótico — exporta con fondo garantizado</title>
+<title>Mapa semiótico — auto-carga diagrama_p.png</title>
 <style>
   :root{
     --bg:#0b0b0b; --panel:#111; --ink:#eaeaea; --muted:#9aa0a6;
@@ -36,14 +37,13 @@
   .lock{margin-left:8px; font-size:12px; color:#ddd; background:#2b2b2b; border:1px solid #3a3a3a; border-radius:10px; padding:4px 8px}
   .dropHint{margin-top:8px; padding:8px; border:1px dashed #333; border-radius:10px; color:#cbd5e1; background:#0e0e12}
   .selected{filter: drop-shadow(0 0 0.75rem rgba(245,158,11,.6));}
-  .warn{margin-top:8px; color:#f59e0b; font-size:12px; display:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <section class="card">
     <h1>Mapa semiótico interactivo</h1>
-    <div class="small">Sliders 1–100 (lineal). Calibración manual. Auto-carga <b>diagrama_p.png</b> (intentamos <b>incrustarlo</b> para que exporte con fondo).</div>
+    <div class="small">Sliders 1–100 (lineal). Calibración manual. **Carga automática** del fondo <b>diagrama_p.png</b>. Exporta PNG con valores.</div>
 
     <h2>Fondo</h2>
     <div class="row">
@@ -60,7 +60,6 @@
       <button class="btn" id="loadBtn">Cargar fondo</button>
       <button class="btn" id="exportBtn">Exportar PNG</button>
     </div>
-    <div id="bgWarn" class="warn">⚠️ El fondo no está incrustado (CORS). Para exportar con fondo, usa el selector de archivo o sirve el proyecto con un servidor local (http://).</div>
 
     <h2>Calibración manual</h2>
     <div class="row2">
@@ -99,7 +98,7 @@
     <h2>Elementos</h2>
     <div class="list" id="list"></div>
 
-    <div class="dropHint">💡 Arrastra imágenes JPG/PNG al gráfico. Miniaturas rectangulares. El PNG exportado incluye la línea <i>ico()/ind()/sim()</i>.</div>
+    <div class="dropHint">💡 Arrastra y suelta imágenes (JPG/PNG) encima del gráfico. Miniaturas rectangulares.</div>
   </section>
 
   <section class="card" id="viz">
@@ -127,14 +126,13 @@ let W=1080, H=768;
 const svg = document.getElementById('svg');
 const bgImg = document.getElementById('bgImg');
 const pointsLayer = document.getElementById('pointsLayer');
-const bgWarn = document.getElementById('bgWarn');
 
 let calibMode = true;
+// Al inicio, ocultamos etiquetas para evitar "flash" de texto grande
 let labelsVisible = false;
 let selectedId = null;
-// ¿El fondo está incrustado (data:)?
-let bgEmbedded = false;
 
+// Atractores relativos
 let A = {icono:{x:0.25,y:0.30}, indice:{x:0.75,y:0.30}, simbolo:{x:0.50,y:0.92}};
 
 const $ = id => document.getElementById(id);
@@ -151,45 +149,43 @@ function setSVGSize(nw, nh){
   updateAttractors(); redraw();
 }
 
-function showLabels(){
-  labelsVisible = true;
-  ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#${id} text`).style.display = 'inline'; });
-}
-
-async function embedBackgroundFromPath(path){
-  try{
-    const res = await fetch(path + '?t=' + Date.now());
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const blob = await res.blob();
-    const reader = new FileReader();
-    const dataUrl = await new Promise(resolve=>{ reader.onload=e=>resolve(e.target.result); reader.readAsDataURL(blob); });
-    const img = new Image();
-    img.onload = ()=>{ setSVGSize(img.naturalWidth||W, img.naturalHeight||H); bgImg.setAttribute('href', dataUrl); bgEmbedded=true; bgWarn.style.display='none'; showLabels(); };
-    img.src = dataUrl;
-  }catch(err){
-    console.warn('Fallo al incrustar fondo desde ruta (CORS/file):', err);
-    // Fallback: usar ruta directa (puede no exportarse)
-    const tmp = new Image();
-    tmp.onload = ()=>{ setSVGSize(tmp.naturalWidth||W, tmp.naturalHeight||H); bgImg.setAttribute('href', path); bgEmbedded=false; bgWarn.style.display='block'; showLabels(); };
-    tmp.src = path + '?t=' + Date.now();
-  }
-}
-
-// Archivo -> dataURL (siempre incrustado)
+// Carga de fondo desde archivo
 document.getElementById('bgFile').addEventListener('change', (e)=>{
   const file = e.target.files?.[0]; if(!file) return;
   const r = new FileReader();
   r.onload = ev =>{
     const data = ev.target.result;
     const img = new Image();
-    img.onload = ()=>{ setSVGSize(img.naturalWidth||W, img.naturalHeight||H); bgImg.setAttribute('href', data); bgEmbedded=true; bgWarn.style.display='none'; showLabels(); };
+    img.onload = ()=>{ setSVGSize(img.naturalWidth||1080, img.naturalHeight||768); bgImg.setAttribute('href', data); showLabels(); };
     img.src = data;
   };
   r.readAsDataURL(file);
 });
+// Carga de fondo desde ruta
+function loadFromPath(path){
+  const img = new Image();
+  img.onload = ()=>{ setSVGSize(img.naturalWidth||1080, img.naturalHeight||768); bgImg.setAttribute('href', path); showLabels(); };
+  img.onerror = ()=> console.warn('No se pudo cargar el fondo desde ruta:', path);
+  img.src = path + '?t=' + Date.now();
+}
 document.getElementById('loadBtn').addEventListener('click', ()=>{
   const path = $('bgPath').value.trim(); if(!path) return;
-  embedBackgroundFromPath(path);
+  loadFromPath(path);
+});
+
+function showLabels(){
+  labelsVisible = true;
+  ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#${id} text`).style.display = 'inline'; });
+}
+document.getElementById('hideLabels').addEventListener('click', ()=>{
+  labelsVisible = !labelsVisible;
+  ['A_icono','A_indice','A_simbolo'].forEach(id=>{
+    document.querySelector(`#${id} text`).style.display = labelsVisible ? 'inline' : 'none';
+  });
+});
+document.getElementById('toggleCalib').addEventListener('click', ()=>{
+  calibMode = !calibMode;
+  $('toggleCalib').textContent = 'Calibración: ' + (calibMode? 'ACTIVADA' : 'DESACTIVADA');
 });
 
 // Drag de atractores
@@ -208,7 +204,7 @@ for(const [gid,key] of [['A_icono','icono'],['A_indice','indice'],['A_simbolo','
     redraw();
   });
   window.addEventListener('mouseup', ()=>{ dragging=false; g.style.cursor='grab'; });
-});
+}
 
 // Modelo lineal
 function computeFromSliders(icono, indice, simbolo){
@@ -377,41 +373,25 @@ function renderList(){
   }
 }
 
-// Export PNG: si el fondo NO está incrustado, intentamos dibujarlo aparte; si el navegador lo bloquea, avisamos.
+// Export PNG
 document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const canvas = document.createElement('canvas'); canvas.width=W; canvas.height=H;
-  const ctx = canvas.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  function renderSVGOver(){
-    const serializer = new XMLSerializer();
-    const str = serializer.serializeToString(svg);
-    const blob = new Blob([str], {type:"image/svg+xml;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const overlay = new Image();
-    overlay.onload = () => {
-      ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
-      const png = canvas.toDataURL('image/png');
-      const a = document.createElement('a'); a.href=png; a.download='mapa_semiotico.png'; a.click();
-      URL.revokeObjectURL(url);
-    };
-    overlay.src = url;
-  }
-
-  if(bgEmbedded){
-    // ya está dentro del SVG como data URL
-    renderSVGOver();
-  }else{
-    // Intento de último recurso: cargar la ruta con CORS anónimo
-    const src = bgImg.getAttribute('href');
-    const bgi = new Image();
-    bgi.crossOrigin = 'anonymous';
-    bgi.onload = ()=>{ ctx.drawImage(bgi, 0,0, canvas.width, canvas.height); renderSVGOver(); };
-    bgi.onerror = ()=>{ alert('No se pudo incluir el fondo por restricciones del navegador. Sube el fondo con el selector de archivo para exportarlo.'); renderSVGOver(); };
-    bgi.src = src;
-  }
+  const serializer = new XMLSerializer();
+  const str = serializer.serializeToString(svg);
+  const blob = new Blob([str], {type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas'); canvas.width=W; canvas.height=H;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0,0,canvas.width,canvas.height);
+    const png = canvas.toDataURL('image/png');
+    const a = document.createElement('a'); a.href=png; a.download='mapa_semiotico.png'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
 });
 
-// Drag&Drop imágenes
+// Drag&Drop de imágenes
 const vizCard = document.getElementById('viz');
 ['dragenter','dragover'].forEach(ev=>vizCard.addEventListener(ev, e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; }));
 vizCard.addEventListener('drop', e=>{
@@ -434,11 +414,11 @@ vizCard.addEventListener('drop', e=>{
   });
 });
 
-// Init: intentar incrustar diagrama_p.png automáticamente
-(async function init(){
+// Init: auto-cargar diagrama_p.png
+(function init(){
   const def = 'diagrama_p.png';
   document.getElementById('bgPath').value = def;
-  await embedBackgroundFromPath(def);
+  loadFromPath(def);
 })();
 </script>
 </body>
