@@ -12,8 +12,6 @@
   }
   html,body{height:100%; margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
   
-  /* --- CAMBIOS EN EL CSS --- */
-
   .wrap{
     display:grid; 
     grid-template-columns: 430px 1fr; 
@@ -56,7 +54,6 @@
   .dot{width:10px; height:10px; border-radius:50%}
   .selected{filter: drop-shadow(0 0 0.75rem rgba(245,158,11,.6));}
 
-  /* Estilo para la barra de desplazamiento */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -105,7 +102,10 @@
       <button class="btn primary" id="addBtn">Agregar punto</button>
       <button class="btn" id="clearBtn">Limpiar</button>
     </div>
-
+    
+    <label for="fileInput" class="btn" style="display: block; text-align: center; margin-top: 10px; background-color: #3730a3;">Subir imagen desde archivo</label>
+    <input type="file" id="fileInput" accept="image/png, image/jpeg" multiple style="display: none;" />
+    
     <h2>Elementos</h2>
     <div class="list" id="list"></div>
     <div class="small" style="margin-top:8px">💡 Arrastrá y soltá imágenes JPG/PNG sobre el gráfico. Miniaturas rectangulares. Renombrar/Bloquear/Redimensionar desde la lista. Los valores <i>ico/ind/sim</i> se muestran bajo cada elemento.</div>
@@ -152,7 +152,7 @@ function updateAttractors(){
   $('coords').textContent = `Ícono(${a.icono.x.toFixed(0)},${a.icono.y.toFixed(0)}) · Índice(${a.indice.x.toFixed(0)},${a.indice.y.toFixed(0)}) · Símbolo(${a.simbolo.x.toFixed(0)},${a.simbolo.y.toFixed(0)})`;
 }
 function setSVGSize(nw, nh){
-  W=nw; H=nh; svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  W=nw; H=nh; svg.setAttribute('viewBox',`0 -100 ${W} ${H}`);
   updateAttractors(); redraw();
 }
 function showLabels(){ labelsVisible=true; ['A_icono','A_indice','A_simbolo'].forEach(id=>{ document.querySelector(`#${id} text`).style.display='inline'; }); }
@@ -364,10 +364,41 @@ vizCard.addEventListener('drop', e=>{
   });
 });
 
-setSVGSize(W,H);
-updateAttractors();
-showLabels();
+// === NUEVA LÓGICA PARA SUBIR IMÁGENES DESDE ARCHIVO ===
+const fileInput = $('fileInput');
+fileInput.addEventListener('change', (e) => {
+  const files = e.target.files;
+  if (!files.length) return;
 
+  const icono = +$('icono').value;
+  const indice = +$('indice').value;
+  const simbolo = +$('simbolo').value;
+  const pos = computeFromSliders(icono, indice, simbolo);
+
+  [...files].forEach(file => {
+    if (!/^image\//.test(file.type)) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const id = crypto.randomUUID();
+      const name = file.name.replace(/\.[^.]+$/, '');
+      
+      points.push({
+        id, name, icono, indice, simbolo, 
+        x: pos.x, y: pos.y, 
+        locked: false, imgSrc: ev.target.result, size: 36
+      });
+      
+      selectedId = id;
+      redraw();
+      renderList();
+    };
+    reader.readAsDataURL(file);
+  });
+  fileInput.value = '';
+});
+
+// --- Lógica para exportar como PNG ---
 const exportBtn = $('exportBtn');
 const vizNode = $('viz');
 
@@ -395,6 +426,11 @@ exportBtn.addEventListener('click', () => {
       $('attractors').style.display = '';
     });
 });
+
+// Init
+setSVGSize(W,H);
+updateAttractors();
+showLabels();
 </script>
 </body>
 </html>
