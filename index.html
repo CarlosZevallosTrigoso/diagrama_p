@@ -1,22 +1,3 @@
-De acuerdo. Tienes toda la razón, el resultado no es el ideal. El objetivo es que el arrastre sea fluido y que la interfaz se actualice en tiempo real, sin compromisos.
-
-He analizado a fondo la situación y encontré el problema de raíz. No tiene que ver con la complejidad del diseño de la lista, sino con la **arquitectura de la función de arrastre**.
-
-### El Problema Real y la Solución Definitiva
-
-El problema de rendimiento es que **estábamos creando un "vigilante" del ratón (`mousemove`) por cada elemento que añadías al mapa**. Si tenías 20 elementos, 20 vigilantes se ejecutaban a la vez cada vez que movías el ratón, causando el colapso.
-
-La solución correcta, y la que he implementado ahora, es tener **un solo "vigilante" central** que se activa únicamente cuando empiezas a arrastrar un elemento y sabe cuál estás moviendo en cada momento. Esto es inmensamente más eficiente.
-
-Como pediste, también **he quitado las funciones de "Guardar" y "Cargar Sesión"** para simplificar el código y centrarnos 100% en el rendimiento y la experiencia de uso principal.
-
------
-
-### Código Completo, Simplificado y Corregido
-
-Aquí tienes la versión definitiva del código. Reemplaza todo tu archivo con este. Verás que los botones de sesión han desaparecido y la lógica del script ha sido reestructurada para ser mucho más eficiente.
-
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -608,4 +589,3 @@ redraw();
 </script>
 </body>
 </html>
-```
