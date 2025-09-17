@@ -113,11 +113,10 @@
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #666; }
 
-  /* --- INICIO: NUEVOS ESTILOS PARA ETIQUETAS SVG --- */
   .point-label {
-    display: none; /* Oculto por defecto */
+    display: none;
     width: 200px;
-    pointer-events: none; /* No interfiere con el clic/arrastre */
+    pointer-events: none;
   }
   .point-label div {
     background: rgba(11, 11, 11, 0.8);
@@ -130,12 +129,10 @@
     display: inline-block;
     backdrop-filter: blur(4px);
   }
-  /* Mostrar cuando el elemento padre (.point-group) está seleccionado o se arrastra */
   .selected .point-label,
   .dragging .point-label {
     display: block;
   }
-  /* --- FIN: NUEVOS ESTILOS PARA ETIQUETAS SVG --- */
 </style>
 </head>
 <body>
@@ -292,7 +289,7 @@ function renderList(){
     header.append(headerLeft);
 
     const body = document.createElement('div'); body.className = 'item-body';
-    body.textContent = `ico(${p.icono}) · ind(${p.indice}) · sim(${p.simbolo})${p.imgSrc?' · img':''}`;
+    body.innerHTML = `<span id="values-${p.id}">ico(${p.icono}) · ind(${p.indice}) · sim(${p.simbolo})${p.imgSrc?' · img':''}</span>`;
 
     const footer = document.createElement('div'); footer.className = 'item-footer';
     const actions = document.createElement('div'); actions.className = 'item-actions';
@@ -330,15 +327,13 @@ function renderList(){
   });
 }
 
-// **INICIO: FUNCIÓN makePointGroup REESCRITA**
 function makePointGroup(p){
   const g = document.createElementNS('http://www.w3.org/2000/svg','g');
   g.setAttribute('transform',`translate(${p.x},${p.y})`);
   g.style.cursor = p.locked ? 'not-allowed' : 'grab';
-  g.classList.add('point-group'); // Clase para identificar estos grupos
+  g.classList.add('point-group');
   if(selectedId===p.id) g.classList.add('selected');
 
-  // Dibuja la imagen o el rectángulo base
   if(p.imgSrc){
     const s=p.size||36;
     const img=document.createElementNS('http://www.w3.org/2000/svg','image');
@@ -359,15 +354,13 @@ function makePointGroup(p){
     g.appendChild(rect);
   }
 
-  // Función auxiliar para crear las etiquetas con fondo
   const createLabel = (text, yOffset) => {
     const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
     foreignObject.setAttribute('class', 'point-label');
-    foreignObject.setAttribute('x', -100); // Centrar el objeto de 200px de ancho
+    foreignObject.setAttribute('x', -100);
     foreignObject.setAttribute('y', yOffset);
     foreignObject.setAttribute('width', 200);
-    foreignObject.setAttribute('height', 50); // Altura suficiente
-
+    foreignObject.setAttribute('height', 50);
     const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
     div.textContent = text;
     foreignObject.appendChild(div);
@@ -399,30 +392,43 @@ function makePointGroup(p){
     g.classList.add('dragging');
     redraw();
   });
+
   window.addEventListener('mousemove', e=>{
-    if(!drag) return;
+    if(!drag || selectedId !== p.id) return;
+    
     const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
     const q=pt.matrixTransform(svg.getScreenCTM().inverse());
-    p.x=Math.max(0,Math.min(W,q.x)); p.y=Math.max(0,Math.min(H,q.y));
+    
+    p.x=Math.max(0,Math.min(W,q.x)); 
+    p.y=Math.max(0,Math.min(H,q.y));
+
     g.setAttribute('transform',`translate(${p.x},${p.y})`);
+
     const s=slidersFromPosition(p.x,p.y);
     p.icono=s.icono; p.indice=s.indice; p.simbolo=s.simbolo;
+    
     $('icono').value=s.icono; $('iconoVal').textContent=s.icono+'/100';
     $('indice').value=s.indice; $('indiceVal').textContent=s.indice+'/100';
     $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo+'/100';
-    renderList();
+    
+    const valuesSpan = document.getElementById(`values-${p.id}`);
+    if (valuesSpan) {
+      valuesSpan.textContent = `ico(${p.icono}) · ind(${p.indice}) · sim(${p.simbolo})${p.imgSrc?' · img':''}`;
+    }
   });
+
   window.addEventListener('mouseup', ()=>{
-    if (!drag) return;
+    if (!drag || selectedId !== p.id) return;
     drag=false;
     g.style.cursor=p.locked?'not-allowed':'grab';
     g.classList.remove('dragging');
+    
     redraw();
+    renderList();
   });
 
   return g;
 }
-// **FIN: FUNCIÓN makePointGroup REESCRITA**
 
 function updateAttractors(){
   const a = abs(A);
