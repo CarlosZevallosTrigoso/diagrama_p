@@ -392,29 +392,26 @@ function makePointGroup(p){
     g.classList.add('dragging');
     redraw();
   });
-
+  
+  // ***** INICIO DE LA CORRECCIÓN *****
   window.addEventListener('mousemove', e=>{
+    // Esta condición asegura que el código solo se ejecute para el elemento que se está arrastrando.
     if(!drag || selectedId !== p.id) return;
     
     const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
     const q=pt.matrixTransform(svg.getScreenCTM().inverse());
     
+    // 1. Mueve el objeto visualmente (muy rápido)
     p.x=Math.max(0,Math.min(W,q.x)); 
     p.y=Math.max(0,Math.min(H,q.y));
-
     g.setAttribute('transform',`translate(${p.x},${p.y})`);
 
+    // 2. Actualiza los sliders en tiempo real (muy rápido)
     const s=slidersFromPosition(p.x,p.y);
     p.icono=s.icono; p.indice=s.indice; p.simbolo=s.simbolo;
-    
     $('icono').value=s.icono; $('iconoVal').textContent=s.icono+'/100';
     $('indice').value=s.indice; $('indiceVal').textContent=s.indice+'/100';
     $('simbolo').value=s.simbolo; $('simboloVal').textContent=s.simbolo+'/100';
-    
-    const valuesSpan = document.getElementById(`values-${p.id}`);
-    if (valuesSpan) {
-      valuesSpan.textContent = `ico(${p.icono}) · ind(${p.indice}) · sim(${p.simbolo})${p.imgSrc?' · img':''}`;
-    }
   });
 
   window.addEventListener('mouseup', ()=>{
@@ -423,9 +420,11 @@ function makePointGroup(p){
     g.style.cursor=p.locked?'not-allowed':'grab';
     g.classList.remove('dragging');
     
+    // 3. Actualiza la lista de la izquierda SOLO al final (la parte "pesada")
     redraw();
     renderList();
   });
+  // ***** FIN DE LA CORRECCIÓN *****
 
   return g;
 }
