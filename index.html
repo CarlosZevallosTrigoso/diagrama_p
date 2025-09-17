@@ -1,3 +1,22 @@
+De acuerdo. Tienes toda la razón, el resultado no es el ideal. El objetivo es que el arrastre sea fluido y que la interfaz se actualice en tiempo real, sin compromisos.
+
+He analizado a fondo la situación y encontré el problema de raíz. No tiene que ver con la complejidad del diseño de la lista, sino con la **arquitectura de la función de arrastre**.
+
+### El Problema Real y la Solución Definitiva
+
+El problema de rendimiento es que **estábamos creando un "vigilante" del ratón (`mousemove`) por cada elemento que añadías al mapa**. Si tenías 20 elementos, 20 vigilantes se ejecutaban a la vez cada vez que movías el ratón, causando el colapso.
+
+La solución correcta, y la que he implementado ahora, es tener **un solo "vigilante" central** que se activa únicamente cuando empiezas a arrastrar un elemento y sabe cuál estás moviendo en cada momento. Esto es inmensamente más eficiente.
+
+Como pediste, también **he quitado las funciones de "Guardar" y "Cargar Sesión"** para simplificar el código y centrarnos 100% en el rendimiento y la experiencia de uso principal.
+
+-----
+
+### Código Completo, Simplificado y Corregido
+
+Aquí tienes la versión definitiva del código. Reemplaza todo tu archivo con este. Verás que los botones de sesión han desaparecido y la lógica del script ha sido reestructurada para ser mucho más eficiente.
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -154,11 +173,6 @@
         <button class="btn" id="recalcAll">Recalcular todos</button>
         <button class="btn" id="resetCalib">Reset atractores</button>
       </div>
-      <div class="row2" style="margin-top:6px; border-top: 1px solid #2a2a2a; padding-top: 6px;">
-        <button class="btn" id="saveSessionBtn" style="background-color: #0d9488;">Guardar Sesión</button>
-        <label for="loadSessionInput" class="btn" style="background-color: #6d28d9; text-align:center;">Cargar Sesión</label>
-        <input type="file" id="loadSessionInput" accept=".json" style="display:none;" />
-      </div>
     </div>
 
     <div class="panel-section">
@@ -224,7 +238,9 @@ let A = JSON.parse(JSON.stringify(A0));
 
 const $ = id => document.getElementById(id);
 const svg = document.getElementById('svg');
-const bgImg = document.getElementById('bgImg');
+
+// **NUEVO**: Variable para gestionar el estado del arrastre globalmente
+let draggedElement = { target: null, point: null };
 
 // --- 2. FUNCIONES PRINCIPALES Y DE CÁLCULO ---
 function abs(Arel){return {icono:{x:Arel.icono.x*W,y:Arel.icono.y*H}, indice:{x:Arel.indice.x*W,y:Arel.indice.y*H}, simbolo:{x:Arel.simbolo.x*W,y:Arel.simbolo.y*H}};}
@@ -262,14 +278,11 @@ function recalcAll(){
   redraw();
 }
 
-// **NUEVO**: Función de optimización para limitar la frecuencia de ejecución (Throttling)
 function throttle(func, limit) {
   let inThrottle;
-  return function() {
-    const args = arguments;
-    const context = this;
+  return function(...args) {
     if (!inThrottle) {
-      func.apply(context, args);
+      func.apply(this, args);
       inThrottle = true;
       setTimeout(() => inThrottle = false, limit);
     }
@@ -292,7 +305,6 @@ function renderList(){
       item.style.borderColor = 'var(--accent)';
       item.style.boxShadow = '0 0 8px var(--accent)';
     }
-
     const header = document.createElement('div'); header.className = 'item-header';
     const headerLeft = document.createElement('div'); headerLeft.className = 'item-header-left';
     const nameEl = document.createElement('b'); nameEl.textContent = p.name;
@@ -301,10 +313,8 @@ function renderList(){
     statusPill.className = p.locked ? 'status-pill bloqueado' : 'status-pill libre';
     headerLeft.append(nameEl, statusPill);
     header.append(headerLeft);
-
     const body = document.createElement('div'); body.className = 'item-body';
     body.innerHTML = `<span id="values-${p.id}">ico(${p.icono}) · ind(${p.indice}) · sim(${p.simbolo})${p.imgSrc?' · img':''}</span>`;
-
     const footer = document.createElement('div'); footer.className = 'item-footer';
     const actions = document.createElement('div'); actions.className = 'item-actions';
     const ren=document.createElement('button'); ren.className='btn'; ren.textContent='Renombrar';
@@ -314,7 +324,6 @@ function renderList(){
     const del=document.createElement('button'); del.className='btn delete'; del.textContent='X';
     actions.append(ren,lock,minus,plus);
     footer.append(actions, del);
-    
     item.append(header, body, footer);
     list.appendChild(item);
 
@@ -397,61 +406,13 @@ function makePointGroup(p){
     e.stopPropagation();
   });
 
-  let drag=false;
-  
-  // Función que actualiza la UI (sliders y texto de la lista)
-  const updateUIOnDrag = (point) => {
-    const s = slidersFromPosition(point.x, point.y);
-    point.icono = s.icono;
-    point.indice = s.indice;
-    point.simbolo = s.simbolo;
-
-    $('icono').value = s.icono; $('iconoVal').textContent = s.icono + '/100';
-    $('indice').value = s.indice; $('indiceVal').textContent = s.indice + '/100';
-    $('simbolo').value = s.simbolo; $('simboloVal').textContent = s.simbolo + '/100';
-    
-    const valuesSpan = document.getElementById(`values-${point.id}`);
-    if (valuesSpan) {
-      valuesSpan.textContent = `ico(${point.icono}) · ind(${point.indice}) · sim(${point.simbolo})${point.imgSrc ? ' · img' : ''}`;
-    }
-  };
-  
-  // Creamos una versión "throttled" de la función de actualización
-  const throttledUpdate = throttle(updateUIOnDrag, 60); // 60ms = aprox. 16fps
-
+  // El listener Mousedown solo inicia el arrastre.
   g.addEventListener('mousedown', ()=>{
     if(p.locked) return;
-    drag=true;
-    g.style.cursor='grabbing';
-    selectedId=p.id;
+    selectedId = p.id;
+    draggedElement = { target: g, point: p };
     g.classList.add('dragging');
     redraw();
-  });
-  
-  window.addEventListener('mousemove', e=>{
-    if(!drag || selectedId !== p.id) return;
-    
-    const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
-    const q=pt.matrixTransform(svg.getScreenCTM().inverse());
-    
-    p.x=Math.max(0,Math.min(W,q.x)); 
-    p.y=Math.max(0,Math.min(H,q.y));
-    g.setAttribute('transform',`translate(${p.x},${p.y})`);
-
-    // Llamamos a la versión throttled para no sobrecargar
-    throttledUpdate(p);
-  });
-
-  window.addEventListener('mouseup', ()=>{
-    if (!drag || selectedId !== p.id) return;
-    drag=false;
-    g.style.cursor=p.locked?'not-allowed':'grab';
-    g.classList.remove('dragging');
-    
-    // Al soltar, hacemos una última actualización para asegurar que el estado final es correcto
-    updateUIOnDrag(p);
-    redraw();
-    renderList();
   });
 
   return g;
@@ -477,7 +438,48 @@ function liveUpdateSelected(){
   redraw(); renderList();
 }
 
-// --- 4. EVENT LISTENERS ---
+// --- 4. EVENT LISTENERS GLOBALES ---
+
+// **NUEVO**: Un solo listener para 'mousemove' que maneja el arrastre
+const handleDrag = throttle((event) => {
+    if (!draggedElement.target) return;
+
+    const { target, point } = draggedElement;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const q = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+    point.x = Math.max(0, Math.min(W, q.x));
+    point.y = Math.max(0, Math.min(H, q.y));
+    target.setAttribute('transform', `translate(${point.x},${point.y})`);
+    
+    const s = slidersFromPosition(point.x, point.y);
+    point.icono = s.icono;
+    point.indice = s.indice;
+    point.simbolo = s.simbolo;
+
+    $('icono').value = s.icono; $('iconoVal').textContent = `${s.icono}/100`;
+    $('indice').value = s.indice; $('indiceVal').textContent = `${s.indice}/100`;
+    $('simbolo').value = s.simbolo; $('simboloVal').textContent = `${s.simbolo}/100`;
+
+    const valuesSpan = document.getElementById(`values-${point.id}`);
+    if (valuesSpan) {
+        valuesSpan.textContent = `ico(${point.icono}) · ind(${point.indice}) · sim(${point.simbolo})${point.imgSrc ? ' · img' : ''}`;
+    }
+}, 16); // Actualiza ~60 veces por segundo, muy fluido
+
+window.addEventListener('mousemove', handleDrag);
+
+// **NUEVO**: Un solo listener para 'mouseup' que finaliza el arrastre
+window.addEventListener('mouseup', () => {
+    if (!draggedElement.target) return;
+    draggedElement.target.classList.remove('dragging');
+    draggedElement = { target: null, point: null }; // Limpiar el estado
+    redraw();
+    renderList();
+});
+
 $('toggleCalib').addEventListener('click', ()=>{
   calibMode = !calibMode;
   $('toggleCalib').textContent = 'Calibración: ' + (calibMode ? 'ACTIVADA' : 'DESACTIVADA');
@@ -599,59 +601,6 @@ exportBtn.addEventListener('click', () => {
     });
 });
 
-const saveBtn = $('saveSessionBtn');
-const loadInput = $('loadSessionInput');
-
-saveBtn.addEventListener('click', () => {
-  const sessionData = {
-    attractors: A,
-    points: points
-  };
-  const jsonString = JSON.stringify(sessionData, null, 2);
-  const blob = new Blob([jsonString], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'sesion-mapa-semiotico.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-});
-
-loadInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  if (!confirm('¿Cargar una nueva sesión? Se perderá todo el progreso actual no guardado.')) {
-    loadInput.value = '';
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      const data = JSON.parse(event.target.result);
-      if (data.attractors && data.points) {
-        A = data.attractors;
-        points = data.points;
-        updateAttractors();
-        redraw();
-        renderList();
-        alert('¡Sesión cargada con éxito!');
-      } else {
-        alert('Error: El archivo de sesión no tiene el formato correcto.');
-      }
-    } catch (error) {
-      alert('Error al leer el archivo. Asegúrate de que sea un archivo de sesión válido.');
-      console.error("Error al parsear JSON:", error);
-    }
-    loadInput.value = '';
-  };
-  reader.readAsText(file);
-});
-
 // --- 5. INICIALIZACIÓN DE LA APP ---
 updateAttractors();
 if (labelsVisible) { showLabels(); } else { hideLabels(); }
@@ -659,3 +608,4 @@ redraw();
 </script>
 </body>
 </html>
+```
