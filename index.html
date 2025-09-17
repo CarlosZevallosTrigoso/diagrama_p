@@ -59,7 +59,7 @@
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #666; }
 
-  /* === NUEVOS ESTILOS PARA EL ACORDEÓN === */
+  /* === ESTILOS PARA EL ACORDEÓN === */
   .accordion-toggle {
     cursor: pointer;
     user-select: none;
@@ -76,9 +76,6 @@
     overflow: hidden;
     transition: max-height 0.35s ease-out;
   }
-  .accordion-toggle.active + .accordion-content {
-    /* max-height es manejado por JavaScript para una transición suave */
-  }
 </style>
 </head>
 <body>
@@ -87,7 +84,7 @@
     <h1>Mapa semiótico interactivo</h1>
     <div class="small" style="margin-bottom: 16px;">💡 Arrastra y suelta imágenes, o súbelas desde un archivo. Renombra, bloquea y redimensiona elementos desde la lista de abajo.</div>
 
-    <h2 class="accordion-toggle" data-section="calibracion">▶ Calibración</h2>
+    <h2 class="accordion-toggle active" data-section="calibracion">▶ Calibración</h2>
     <div class="accordion-content">
       <div class="row2">
         <button class="btn" id="toggleCalib">Calibración: ACTIVADA</button>
@@ -101,7 +98,7 @@
       </div>
     </div>
 
-    <h2 class="accordion-toggle active" data-section="nuevo-elemento">▼ Nuevo elemento</h2>
+    <h2 class="accordion-toggle" data-section="nuevo-elemento">▼ Nuevo elemento</h2>
     <div class="accordion-content">
       <label>Nombre</label>
       <input id="name" type="text" placeholder="Ej.: Afiche de campaña" />
@@ -152,7 +149,8 @@ let labelsVisible = false;
 
 const $ = id => document.getElementById(id);
 
-let A0 = {icono:{x:0.25,y:0.5}, indice:{x:0.75,y:0.5}, simbolo:{x:0.50,y:0.85}};
+// FIX 1: Adjusted "simbolo" y-coordinate from 0.85 to 0.78 to make it visible
+let A0 = {icono:{x:0.25,y:0.5}, indice:{x:0.75,y:0.5}, simbolo:{x:0.50,y:0.78}};
 let A = JSON.parse(JSON.stringify(A0));
 
 function abs(Arel){return {icono:{x:Arel.icono.x*W,y:Arel.icono.y*H}, indice:{x:Arel.indice.x*W,y:Arel.indice.y*H}, simbolo:{x:Arel.simbolo.x*W,y:Arel.simbolo.y*H}};}
@@ -437,7 +435,7 @@ exportBtn.addEventListener('click', () => {
     });
 });
 
-// === NUEVA LÓGICA PARA EL ACORDEÓN ===
+// === LÓGICA CORREGIDA PARA EL ACORDEÓN ===
 document.addEventListener('DOMContentLoaded', () => {
     const accordions = document.querySelectorAll('.accordion-toggle');
     const openByDefault = document.querySelector('.accordion-toggle.active');
@@ -471,16 +469,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggle.addEventListener('click', () => {
             const content = toggle.nextElementSibling;
-            const isActive = toggle.classList.contains('active');
-            
-            // Cerrar todas las secciones
+            const isCurrentlyActive = toggle.classList.contains('active');
+
+            // 1. Cerrar todas las demás secciones que NO son la que se clickeó
             accordions.forEach(otherToggle => {
-                closeAccordion(otherToggle, otherToggle.nextElementSibling);
+                if (otherToggle !== toggle) {
+                    closeAccordion(otherToggle, otherToggle.nextElementSibling);
+                }
             });
 
-            // Si no estaba activa, abrir la sección clickeada
-            if (!isActive) {
-                openAccordion(toggle, content);
+            // 2. Ahora, simplemente alterna (toggle) el estado de la sección clickeada
+            if (isCurrentlyActive) {
+                closeAccordion(toggle, content); // Si estaba activa, ciérrala.
+            } else {
+                openAccordion(toggle, content); // Si estaba cerrada, ábrela.
             }
         });
     });
