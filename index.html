@@ -158,8 +158,8 @@ let labelsVisible = true; // Por defecto, las etiquetas de los atractores serán
 
 const $ = id => document.getElementById(id);
 
-// Coordenadas iniciales para los atractores (más a la izquierda y en columna)
-let A0 = {icono:{x:0.05, y:0.25}, indice:{x:0.05, y:0.5}, simbolo:{x:0.05, y:0.75}};
+// Coordenadas para un clúster vertical a la izquierda
+let A0 = {icono:{x:0.12, y:0.20}, indice:{x:0.12, y:0.26}, simbolo:{x:0.12, y:0.32}};
 let A = JSON.parse(JSON.stringify(A0));
 
 function abs(Arel){return {icono:{x:Arel.icono.x*W,y:Arel.icono.y*H}, indice:{x:Arel.indice.x*W,y:Arel.indice.y*H}, simbolo:{x:Arel.simbolo.x*W,y:Arel.simbolo.y*H}};}
